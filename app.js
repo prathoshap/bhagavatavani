@@ -33,6 +33,7 @@ const ICON = {
   play: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10-6.5z"/></svg>`,
   pause: `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5.5" width="3.4" height="13" rx="1"/><rect x="14.1" y="5.5" width="3.4" height="13" rx="1"/></svg>`,
   tanpura: `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="17.5" r="3.6"/><path d="M12 13.9V3.5"/><path d="M9.7 3.5h4.6"/><path d="M10.4 6.2h3.2M10.6 8.6h2.8M10.8 11h2.4"/></svg>`,
+  loop: `<svg viewBox="0 0 24 24" ${SW}><path d="M16.5 3.5l3 3-3 3"/><path d="M19.5 6.5H8a4 4 0 0 0-4 4v1"/><path d="M7.5 20.5l-3-3 3-3"/><path d="M4.5 17.5H16a4 4 0 0 0 4-4v-1"/></svg>`,
   close: `<svg viewBox="0 0 24 24" ${SW} stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   moon: `<svg viewBox="0 0 24 24" ${SW}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`,
   sun: `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></svg>`,
@@ -190,6 +191,7 @@ function buildShell(){
       <button class="ctl" id="prev">${ICON.prev}</button>
       <button class="pp" id="pp">${ICON.play}</button>
       <button class="ctl" id="next">${ICON.next}</button>
+      <button class="ctl loop" id="loopBtn" title="repeat adhyāya">${ICON.loop}</button>
       <span class="ref" id="pref"></span>
       <button class="ctl tan" id="tanBtn" title="tānpūrā drone">${ICON.tanpura}</button>
       <button class="ctl tanvol" id="tanVolBtn" title="tānpūrā volume" style="display:none"></button>
@@ -344,6 +346,7 @@ function renderAdhyayas(sk){
 // ── Read: reader (continuous scroll) ───────────────────────────────────────
 let chapterAudio = [];   // playable verses in current chapter
 let autoPlayNext = false;   // set when rolling from one adhyāya into the next, so renderReader resumes playback
+let loopAdhyaya = load('bhag_loop', false);   // repeat the current chapter instead of advancing (pārāyaṇa)
 function renderReader(sk, a, focusV){
   const ad = q('SELECT heading_dev FROM adhyayas WHERE skandha=? AND adhyaya=?', [sk, a])[0] || {};
   setTitle(`${adhName(a, ad.heading_dev)} · ${sk}.${a}`);
@@ -527,6 +530,7 @@ function setupPlayer(){
   au.onerror = () => { if (AUDIO_BASE) toast('audio not available yet for this śloka'); };
   document.getElementById('tanBtn').onclick = toggleTanpura;
   document.getElementById('tanVolBtn').onclick = cycleTanVol; updateTanBtn();
+  document.getElementById('loopBtn').onclick = toggleLoop; updateLoopBtn();
 }
 // last śloka of the chapter finished → roll on to the next adhyāya (then next skandha), else stop
 function nextAdhyaya(sk, a){
@@ -536,11 +540,15 @@ function nextAdhyaya(sk, a){
   return null;
 }
 function endOfChapter(){
+  if (loopAdhyaya) return playFrom(0);                 // repeat: restart this same adhyāya
   const cur = chapterAudio[0];                         // any entry carries this chapter's sk/a
   const nx = cur && nextAdhyaya(cur.sk, cur.a);
   if (nx){ autoPlayNext = true; location.hash = `#/s/${nx.sk}/${nx.a}`; }   // renderReader auto-plays it
   else stopAudio();                                    // reached 12.last — end of the text
 }
+function updateLoopBtn(){ const b = document.getElementById('loopBtn'); if (b) b.classList.toggle('on', loopAdhyaya); }
+function toggleLoop(){ loopAdhyaya = !loopAdhyaya; save('bhag_loop', loopAdhyaya); updateLoopBtn();
+  toast(loopAdhyaya ? 'repeat adhyāya: on' : 'repeat: off'); }
 function playFrom(i){
   if (i < 0) return;                                   // before the first verse → stay put
   if (!chapterAudio.length){ stopAudio(); return; }

@@ -96,7 +96,8 @@ a{color:var(--accent);text-decoration:none}
 
 /* ── audio player bar ────────────────────────────────────────────────────── */
 .player{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:24;display:none;
-  background:var(--bar);border-top:1px solid var(--rule);align-items:center;gap:12px;padding:8px 16px}
+  background:var(--bar);border-top:1px solid var(--rule);align-items:center;gap:8px;padding:8px 14px}
+.player .loop.on{color:var(--accent)}
 .player.on{display:flex}
 .player .pp{font-size:24px;color:var(--accent)}
 .player .ref{font-size:13px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
