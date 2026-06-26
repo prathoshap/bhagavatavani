@@ -787,19 +787,50 @@ function renderSpeakerDetail(id){
 }
 
 // topic-wise (viṣaya) — all 1,041 topics, grouped by skandha
-function renderTopicIndex(){
-  setTitle(L('visayaIdx')); back(true);
+// raw (unescaped) translated topic text — for both display (re-escaped) and the search key
+function rawTopic(id, dev){
+  for (const lang of langChain()){
+    const r = q('SELECT text FROM topic_tr WHERE topic_id=? AND lang=?', [id, lang])[0];
+    if (r) return r.text;
+  }
+  return tr(dev);
+}
+let topicIdxCache = null, topicIdxLang = null;
+function ensureTopicIdx(){
+  if (topicIdxCache && topicIdxLang === script) return topicIdxCache;   // rebuild only when language changes
   const rows = q('SELECT id,skandha sk,adhyaya a,verse_start vs,verse_end ve,text_dev t FROM topics ORDER BY skandha,adhyaya,ordinal');
-  let html = '', curSk = null;
-  for (const t of rows){
-    if (t.sk !== curSk){ curSk = t.sk; html += `<div class="sectionsub" style="text-align:left;color:var(--accent);margin:18px 0 4px">${L('skandha')} ${t.sk}</div>`; }
+  const norm = window.BhagNorm;
+  topicIdxCache = rows.map(t => {
+    const disp = rawTopic(t.id, t.t);
     const rng = t.vs == null ? '' : (t.vs === t.ve ? t.vs : `${t.vs}–${t.ve}`);
     const href = t.vs == null ? `#/s/${t.sk}/${t.a}` : `#/s/${t.sk}/${t.a}/${t.vs}`;
-    html += `<a class="tindex-row" href="${href}">
-        <span class="rng">${t.sk}.${t.a}${rng !== '' ? '.' + rng : ''}</span>
-        <span>${trTopic(t.id, t.t)}</span></a>`;
-  }
-  V(html);
+    const ref = `${t.sk}.${t.a}${rng !== '' ? '.' + rng : ''}`;
+    let key = disp;                                       // match the displayed (translated) text…
+    if (norm){ const asc = norm.devToAscii(t.t || ''); key += ' ' + asc + ' ' + norm.asciiToSkel(asc); }  // …and the Sanskrit (roman + skeleton) for cross-script
+    return { sk: t.sk, disp, ref, href, key: key.toLowerCase() };
+  });
+  topicIdxLang = script;
+  return topicIdxCache;
+}
+function renderTopicIndex(){
+  setTitle(L('visayaIdx')); back(true);
+  const items = ensureTopicIdx();
+  const paint = (filter) => {
+    const ql = filter.trim().toLowerCase();
+    let qa = '', qk = '';
+    if (ql && window.BhagNorm){ const nq = BhagNorm.normalizeQuery(filter); qa = (nq[0] || '').toLowerCase(); qk = (nq[1] || '').toLowerCase(); }
+    let html = '', curSk = null, n = 0;
+    for (const it of items){
+      if (ql && !(it.key.includes(ql) || (qa && it.key.includes(qa)) || (qk && it.key.includes(qk)))) continue;
+      if (it.sk !== curSk){ curSk = it.sk; html += `<div class="sectionsub" style="text-align:left;color:var(--accent);margin:18px 0 4px">${L('skandha')} ${it.sk}</div>`; }
+      html += `<a class="tindex-row" href="${it.href}"><span class="rng">${it.ref}</span><span>${esc(it.disp)}</span></a>`;
+      n++;
+    }
+    return n ? html : `<div class="empty">—</div>`;
+  };
+  V(`<div class="searchbox"><input id="tq" type="search" placeholder="${esc(L('visayaIdx'))} · search" autocomplete="off"></div><div id="tlist">${paint('')}</div>`);
+  const inp = document.getElementById('tq');
+  inp.oninput = () => { document.getElementById('tlist').innerHTML = paint(inp.value); };
 }
 
 // ── Pada-wise (word concordance) — built lazily in memory, avyayas stripped ──
