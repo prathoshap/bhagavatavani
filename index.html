@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="sa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#fbf7ef">
+<title>Bhāgavata-VāNi</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600&family=Noto+Serif+Kannada&family=Noto+Serif+Telugu&family=Noto+Serif+Tamil&family=Noto+Serif+Malayalam&family=Noto+Serif+Bengali&family=Noto+Serif+Gujarati&family=Noto+Serif+Gurmukhi&family=Noto+Serif+Oriya&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app"><div class="spin">loading the Bhāgavatam…</div></div>
+
+<script src="sql-wasm.js"></script>
+<script src="normalize.js"></script>
+<script src="app.js"></script>
+<!-- dev: keep the service worker OFF and self-heal any stale cache so code changes show immediately -->
+<script>
+(async()=>{
+  let had=false;
+  if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs){await r.unregister();had=true;}}
+  if(window.caches){const ks=await caches.keys();if(ks.length)had=true;await Promise.all(ks.map(k=>caches.delete(k)));}
+  if(had && !sessionStorage.getItem('swpurged')){sessionStorage.setItem('swpurged','1');location.reload();}
+})();
+</script>
+</body>
+</html>
