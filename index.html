@@ -18,13 +18,16 @@
 <script src="sql-wasm.js"></script>
 <script src="normalize.js"></script>
 <script src="app.js"></script>
-<!-- dev: keep the service worker OFF and self-heal any stale cache so code changes show immediately -->
+<!-- Production web (real https host): register the service worker → offline + instant repeat loads.
+     Dev (localhost) and the native apps (capacitor:// or https://localhost): keep it OFF and
+     self-heal any stale cache so code changes always show immediately. -->
 <script>
 (async()=>{
-  let had=false;
-  if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs){await r.unregister();had=true;}}
-  if(window.caches){const ks=await caches.keys();if(ks.length)had=true;await Promise.all(ks.map(k=>caches.delete(k)));}
-  if(had && !sessionStorage.getItem('swpurged')){sessionStorage.setItem('swpurged','1');location.reload();}
+  if(!('serviceWorker' in navigator)) return;
+  const prod = location.protocol==='https:' && location.hostname!=='localhost' && location.hostname!=='127.0.0.1';
+  if(prod){ try{ await navigator.serviceWorker.register('sw.js'); }catch(e){} return; }
+  for(const r of await navigator.serviceWorker.getRegistrations()) r.unregister();
+  if(window.caches){ for(const k of await caches.keys()) caches.delete(k); }
 })();
 </script>
 </body>
