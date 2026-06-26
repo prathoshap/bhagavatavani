@@ -204,7 +204,7 @@ function buildShell(){
       <button class="ctl" id="selcancel">${ICON.close}</button>
     </div>` : ''}
     <nav class="tabbar" id="tabbar">${tabbarHTML()}</nav>
-    <audio id="au"></audio>`;
+    <audio id="au"></audio><audio id="au2"></audio>`;
   document.getElementById('back').onclick = () => { if (history.length > 1) history.back(); else location.hash = '#/'; };
   document.getElementById('scriptBtn').onclick = openLangMenu;
   document.getElementById('fontBtn').onclick = openFontMenu;
@@ -511,23 +511,47 @@ function cycleTanVol(){
 }
 
 // ── audio player ───────────────────────────────────────────────────────────
-let au, curIdx = -1, segs = null, speeds = [1, 1.25, 1.5, 0.75], si = 0;
+let au, auPre, curIdx = -1, segs = null, speeds = [1, 1.25, 1.5, 0.75], si = 0;
+// ── gapless transition: a 2nd <audio> preloads the next śloka so the only delay between ślokas is
+// a deliberate, constant gap (not network/decode latency — the files have zero leading/trailing silence).
+let preIdx = -1, advanceTimer = 0, gapPaused = false, primed = false, unlockP = Promise.resolve();
+const INTER_GAP = +localStorage.getItem('bhag_gap') || 0.75;   // seconds between ślokas (tunable, no rebuild)
+const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+function clearAdvance(){ if (advanceTimer){ clearTimeout(advanceTimer); advanceTimer = 0; } }
+function scheduleAdvance(){ clearAdvance(); advanceTimer = setTimeout(() => { advanceTimer = 0; playFrom(curIdx + 1); }, INTER_GAP * 1000); }
+function primeAudio(){                                    // iOS/mobile-Safari: unlock the preloader inside the first gesture
+  if (primed) return; primed = true;
+  try { auPre.src = SILENT; unlockP = (auPre.play() || Promise.resolve()).then(() => auPre.pause()).catch(() => {}); } catch (e){}
+}
+async function preloadNext(i){
+  let j = i + 1;
+  if (j >= chapterAudio.length){ if (loopAdhyaya) j = 0; else { preIdx = -1; return; } }   // looping → preload the first śloka
+  const v = chapterAudio[j], src = await resolveAudioSrc(v);
+  await unlockP;                                          // don't clobber the silent-unlock src mid-flight
+  if (curIdx !== i) return;                               // user moved on during the async resolve
+  try { auPre.preload = 'auto'; auPre.src = src; auPre.load(); preIdx = j; } catch (e){ preIdx = -1; }
+}
 function setupPlayer(){
-  au = document.getElementById('au');
-  document.getElementById('pp').onclick = () => {
-    if (curIdx < 0) return playFrom(0);          // idle → start the chapter
-    au.paused ? au.play() : au.pause();
+  au = document.getElementById('au'); auPre = document.getElementById('au2');
+  const pp = document.getElementById('pp');
+  for (const el of [au, auPre]){                          // handlers fire on BOTH elements; act only for the active one
+    el.onplay  = e => { if (e.target !== au) return; pp.innerHTML = ICON.pause; startDrone(); };
+    el.onpause = e => { if (e.target !== au) return; pp.innerHTML = ICON.play; stopDrone(); };
+    el.onended = e => { if (e.target !== au) return; scheduleAdvance(); };      // wait INTER_GAP, then advance
+    el.ontimeupdate = e => { if (e.target === au) karaoke(); };
+    el.onerror = e => { if (e.target === au && AUDIO_BASE) toast('audio not available yet for this śloka'); };
+  }
+  pp.onclick = () => {
+    if (curIdx < 0) return playFrom(0);                   // idle → start the chapter
+    if (advanceTimer){ clearAdvance(); gapPaused = true; pp.innerHTML = ICON.play; stopDrone(); return; }  // pause within the gap
+    if (gapPaused){ gapPaused = false; return playFrom(curIdx + 1); }           // resume → next śloka
+    au.paused ? au.play().catch(() => {}) : au.pause();
   };
   document.getElementById('prev').onclick = () => playFrom(curIdx - 1);
   document.getElementById('next').onclick = () => playFrom(curIdx + 1);
   document.getElementById('pclose').onclick = stopAudio;
   document.getElementById('spd').onclick = () => { si = (si + 1) % speeds.length;
-    au.playbackRate = speeds[si]; document.getElementById('spd').textContent = speeds[si] + '×'; };
-  au.onplay = () => { document.getElementById('pp').innerHTML = ICON.pause; startDrone(); };   // also covers verse-advance & resume
-  au.onpause = () => { document.getElementById('pp').innerHTML = ICON.play; stopDrone(); };     // user pause / stopAudio
-  au.onended = () => playFrom(curIdx + 1);
-  au.ontimeupdate = karaoke;
-  au.onerror = () => { if (AUDIO_BASE) toast('audio not available yet for this śloka'); };
+    au.playbackRate = auPre.playbackRate = speeds[si]; document.getElementById('spd').textContent = speeds[si] + '×'; };
   document.getElementById('tanBtn').onclick = toggleTanpura;
   document.getElementById('tanVolBtn').onclick = cycleTanVol; updateTanBtn();
   document.getElementById('loopBtn').onclick = toggleLoop; updateLoopBtn();
@@ -557,13 +581,22 @@ function playFrom(i){
   const offline = isChapterDownloaded(v.sk, v.a);
   if (!AUDIO_BASE && !offline){ toast('Set the R2 audio base to enable recitation'); return; }
   if (tanpuraEnabled) ensureAudioCtx();          // unlock WebAudio inside the tap gesture (iOS)
+  primeAudio();                                   // unlock the preloader element (iOS, first gesture)
+  clearAdvance(); gapPaused = false;
   curIdx = i;
   document.getElementById('player').classList.add('on');
   document.getElementById('pref').textContent = v.ref + (offline ? ' · offline' : '');
   highlightActive(v.aid);
   segs = loadSegs(v);                              // synchronous DB lookup (offline-safe)
-  resolveAudioSrc(v).then(src => { if (curIdx !== i) return;   // user skipped before resolve
-    au.src = src; au.playbackRate = speeds[si]; au.play().catch(() => {}); });
+  if (preIdx === i){                              // the preloader already buffered this śloka → instant swap
+    const old = au; au = auPre; auPre = old; preIdx = -1;
+    try { old.pause(); } catch (e){}              // stop the outgoing element (e.target!==au now → no UI/drone change)
+    au.playbackRate = speeds[si]; au.play().catch(() => {});
+    preloadNext(i);
+  } else {                                        // cold load (first play / manual jump)
+    resolveAudioSrc(v).then(src => { if (curIdx !== i) return;   // user skipped before resolve
+      au.src = src; au.playbackRate = speeds[si]; au.play().catch(() => {}); preloadNext(i); });
+  }
 }
 
 // ── offline audio (native): save WAVs to the device, play locally ───────────
@@ -614,7 +647,10 @@ function setDlBtn(sk, a){
   b.innerHTML = `${dl ? ICON.check : ICON.download}<span>${dl ? 'Saved offline' : 'Download audio'}</span>`;
   b.classList.toggle('on', dl);
 }
-function stopAudio(){ au.pause(); au.removeAttribute('src'); curIdx = -1; segs = null;
+function stopAudio(){ clearAdvance(); gapPaused = false;
+  au.pause(); au.removeAttribute('src');
+  if (auPre){ try { auPre.pause(); auPre.removeAttribute('src'); } catch (e){} } preIdx = -1;
+  curIdx = -1; segs = null;
   document.getElementById('player').classList.remove('on');
   document.querySelectorAll('.v.active').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.ln.now').forEach(l => l.classList.remove('now')); }
