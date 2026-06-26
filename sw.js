@@ -1,7 +1,7 @@
 /* Bhāgavatam PWA service worker — precache the whole app (incl. the slimmed ~12.5MB DB, 4.3MB gz)
    so the FIRST visit caches everything and every later visit is instant + fully offline. tanpura.wav
    is runtime-cached on first play. Bump CACHE on every deploy to push updates (activate purges old). */
-const CACHE = 'bhag-v7';
+const CACHE = 'bhag-v8';
 const SHELL = ['./', './index.html', './app.css', './app.js', './normalize.js',
   './sql-wasm.js', './sql-wasm.wasm', './manifest.webmanifest', './bhagavatam.db'];
 

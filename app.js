@@ -35,6 +35,7 @@ const ICON = {
   tanpura: `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="17.5" r="3.6"/><path d="M12 13.9V3.5"/><path d="M9.7 3.5h4.6"/><path d="M10.4 6.2h3.2M10.6 8.6h2.8M10.8 11h2.4"/></svg>`,
   loop: `<svg viewBox="0 0 24 24" ${SW}><path d="M16.5 3.5l3 3-3 3"/><path d="M19.5 6.5H8a4 4 0 0 0-4 4v1"/><path d="M7.5 20.5l-3-3 3-3"/><path d="M4.5 17.5H16a4 4 0 0 0 4-4v-1"/></svg>`,
   close: `<svg viewBox="0 0 24 24" ${SW} stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="12" r="9"/><path d="M12 11v5.2"/><path d="M12 7.7v.2"/></svg>`,
   moon: `<svg viewBox="0 0 24 24" ${SW}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`,
   sun: `<svg viewBox="0 0 24 24" ${SW}><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></svg>`,
   lists: `<svg viewBox="0 0 24 24" ${SW}><path d="M8 6h12M8 12h12M8 18h9"/><path d="M3.6 6h.01M3.6 12h.01M3.6 18h.01"/></svg>`,
@@ -182,6 +183,7 @@ function buildShell(){
     <header class="topbar" id="topbar">
       <button class="back" id="back" style="display:none">‹</button>
       <div class="title" id="title">श्रीमद्भागवतम्</div>
+      <button class="iconbtn" id="infoBtn" title="about · acknowledgements · contact">${ICON.info}</button>
       <button class="iconbtn fontbtn" id="fontBtn" title="text size">A<span>a</span></button>
       <button class="iconbtn" id="themeBtn" title="light / dark"></button>
       <button class="langbtn" id="scriptBtn" title="reading language"></button>
@@ -207,6 +209,7 @@ function buildShell(){
     <audio id="au"></audio><audio id="au2"></audio>`;
   document.getElementById('back').onclick = () => { if (history.length > 1) history.back(); else location.hash = '#/'; };
   document.getElementById('scriptBtn').onclick = openLangMenu;
+  document.getElementById('infoBtn').onclick = () => { location.hash = '#/about'; };
   document.getElementById('fontBtn').onclick = openFontMenu;
   const tb = document.getElementById('themeBtn'); tb.innerHTML = curTheme() === 'dark' ? ICON.sun : ICON.moon; tb.onclick = toggleTheme;
   setLangBtn();
