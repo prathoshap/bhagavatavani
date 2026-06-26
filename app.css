@@ -5,15 +5,11 @@
   --topicbg:#f5ecd9; --synbg:#f8f2e4; --bar:#fffdf8;
   --fs:19px; --maxw:740px; --read:20px;
 }
-/* dark palette: explicit [data-theme=dark], or OS-dark unless explicitly light */
+/* dark palette: applied ONLY when [data-theme=dark] is set via the toggle. Default is light
+   everywhere (welcome + all pages) — the app does NOT auto-follow the OS dark preference. */
 :root[data-theme="dark"]{--bg:#14110d;--surface:#1c1813;--ink:#ece2d2;--muted:#9c8f7c;--rule:#2e271d;
   --accent:#d98a5c;--accent-soft:#2a2118;--verse:#ece2d2;--prose:#c9bba6;
   --topicbg:#241d14;--synbg:#1f1a12;--bar:#1a160f;}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--bg:#14110d;--surface:#1c1813;--ink:#ece2d2;--muted:#9c8f7c;--rule:#2e271d;
-    --accent:#d98a5c;--accent-soft:#2a2118;--verse:#ece2d2;--prose:#c9bba6;
-    --topicbg:#241d14;--synbg:#1f1a12;--bar:#1a160f;}
-}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-size:var(--fs);line-height:1.75;

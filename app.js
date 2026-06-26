@@ -74,8 +74,7 @@ function openFontMenu(){
     applyRead(+b.dataset.px); localStorage.setItem('bhag_read', b.dataset.px);
     ov.querySelectorAll('.lang-item').forEach(x => x.classList.toggle('on', x === b)); };
 }
-const curTheme = () => document.documentElement.getAttribute('data-theme') ||
-  (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+const curTheme = () => document.documentElement.getAttribute('data-theme') || 'light';   // default light; dark only via toggle
 function toggleTheme(){
   const next = curTheme() === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
