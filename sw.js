@@ -1,10 +1,9 @@
-/* Bhāgavatam PWA service worker — cache the app shell for offline + instant repeat loads.
-   The big binaries (bhagavatam.db ~25MB, tanpura.wav) are NOT precached here — they're cached at
-   runtime by the cache-first fetch handler on first request, so install stays fast and the DB
-   isn't downloaded twice. Bump CACHE on every deploy to push updates (activate purges old caches). */
-const CACHE = 'bhag-v6';
+/* Bhāgavatam PWA service worker — precache the whole app (incl. the slimmed ~12.5MB DB, 4.3MB gz)
+   so the FIRST visit caches everything and every later visit is instant + fully offline. tanpura.wav
+   is runtime-cached on first play. Bump CACHE on every deploy to push updates (activate purges old). */
+const CACHE = 'bhag-v7';
 const SHELL = ['./', './index.html', './app.css', './app.js', './normalize.js',
-  './sql-wasm.js', './sql-wasm.wasm', './manifest.webmanifest'];
+  './sql-wasm.js', './sql-wasm.wasm', './manifest.webmanifest', './bhagavatam.db'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
