@@ -2,7 +2,7 @@
    The big binaries (bhagavatam.db ~25MB, tanpura.wav) are NOT precached here — they're cached at
    runtime by the cache-first fetch handler on first request, so install stays fast and the DB
    isn't downloaded twice. Bump CACHE on every deploy to push updates (activate purges old caches). */
-const CACHE = 'bhag-v5';
+const CACHE = 'bhag-v6';
 const SHELL = ['./', './index.html', './app.css', './app.js', './normalize.js',
   './sql-wasm.js', './sql-wasm.wasm', './manifest.webmanifest'];
 
