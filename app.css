@@ -99,17 +99,24 @@ a{color:var(--accent);text-decoration:none}
 
 /* ── audio player bar ────────────────────────────────────────────────────── */
 .player{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:24;display:none;
-  background:var(--bar);border-top:1px solid var(--rule);align-items:center;gap:8px;padding:8px 14px}
+  background:var(--bar);border-top:1px solid var(--rule);align-items:center;gap:10px;padding:11px 16px}
 .player .loop.on{color:var(--accent)}
 .player.on{display:flex}
-.player .pp{font-size:24px;color:var(--accent)}
-.player .ref{font-size:13px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.player .ctl{font-size:18px;color:var(--muted);padding:2px 5px}
-.player .spd{font-size:12px;color:var(--accent);border:1px solid var(--rule);border-radius:8px;padding:1px 7px}
-.player .tan{font-size:18px;color:var(--muted);opacity:.6}
+.player .pp{font-size:30px;color:var(--accent);padding:2px 4px}
+.player .ref{font-size:14px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .ctl{font-size:22px;color:var(--muted);padding:6px 7px}
+.player .spd{font-size:13px;font-weight:600;color:var(--accent);border:1px solid var(--rule);border-radius:9px;padding:6px 10px;min-width:44px}
+.player .tan{font-size:22px;color:var(--muted);opacity:.6}
 .player .tan.on{color:var(--accent);opacity:1}
-.player .tanvol{font-size:18px;color:var(--accent);padding:2px 4px}
-.player .tanvol svg{width:18px;height:18px;display:block}
+.player .tanvol{font-size:22px;color:var(--accent);padding:6px 5px}
+.player .tanvol svg{width:22px;height:22px;display:block}
+/* speed slider popup — anchored above the speed pill */
+.spdpop{display:none;position:absolute;right:14px;bottom:100%;margin-bottom:9px;background:var(--bar);
+  border:1px solid var(--rule);border-radius:13px;box-shadow:0 6px 24px #0003;padding:13px 17px;
+  align-items:center;gap:13px;z-index:25}
+.spdpop.on{display:flex}
+.spdpop input[type=range]{width:165px;accent-color:var(--accent)}
+.spdval{font-size:13px;font-weight:600;color:var(--accent);min-width:42px;text-align:right}
 
 /* ── search ──────────────────────────────────────────────────────────────── */
 .searchbox{display:flex;gap:8px;margin:4px 0 12px}
@@ -150,6 +157,12 @@ a{color:var(--accent);text-decoration:none}
 .scriptcard:active{transform:scale(.98)}
 .sc-native{font-size:15px;color:var(--ink);line-height:1.2;overflow-wrap:anywhere}
 .sc-eng{font-size:10px;color:var(--muted);line-height:1.15}
+.w-begin{margin:20px auto 6px;display:block;background:var(--accent);color:#fff;border:none;
+  border-radius:13px;font-size:18px;font-weight:600;padding:14px 46px;cursor:pointer;
+  box-shadow:0 4px 18px #0002;letter-spacing:.01em}
+.w-begin:active{transform:scale(.98)}
+.w-change{margin-top:2px;color:var(--muted);font-size:13px;background:none;border:none;
+  text-decoration:underline;cursor:pointer}
 .w-ack{margin-top:16px;color:var(--accent);font-size:13px;background:none;border:none;
   text-decoration:underline;cursor:pointer}
 .ack-section{margin:22px auto;max-width:430px}
@@ -264,8 +277,8 @@ body.selecting .v .star{display:none}
 /* ── icons (SVG, inherit currentColor) ───────────────────────────────────── */
 .tab .i{height:23px;display:flex;align-items:center}
 .tab .i svg{width:23px;height:23px;display:block}
-.player .pp svg{width:27px;height:27px;display:block}
-.player .ctl svg{width:21px;height:21px;display:block}
+.player .pp svg{width:33px;height:33px;display:block}
+.player .ctl svg{width:25px;height:25px;display:block}
 .iconbtn svg{width:19px;height:19px;display:block}
 .v .star{width:18px;height:18px}
 .v .star svg{width:16px;height:16px;display:block;stroke:var(--accent)}

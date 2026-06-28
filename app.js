@@ -117,23 +117,29 @@ const esc = s => { const e = document.createElement('div'); e.textContent = s ??
 function q(sql, p = []){ const s = db.prepare(sql); s.bind(p); const o = []; while (s.step()) o.push(s.getAsObject()); s.free(); return o; }
 
 // ── boot ─────────────────────────────────────────────────────────────────
-let dbReady = false, launched = false;
-// show the welcome instantly (it needs no DB); load the 21 MB DB in the background
-if (!script) renderWelcome();
+let dbReady = false, launched = false, entered = false;
+// always open on the landing page (branding + Begin / script picker); it needs no DB,
+// so it shows instantly while the DB loads in the background
+renderWelcome();
 initSqlJs({ locateFile: f => f })   // local bundled sql-wasm.wasm (fully offline)
   .then(SQL => fetch('bhagavatam.db', { cache: 'no-store' }).then(r => r.arrayBuffer())
     .then(buf => { db = new SQL.Database(new Uint8Array(buf)); dbReady = true; maybeLaunch(); }))
   .catch(e => { app.innerHTML = `<div class="spin">couldn’t load — serve over http (not file://).<br>${esc(''+e)}</div>`; });
 
-// launch the app once a language is chosen AND the DB has finished loading
+// launch the app once the user taps Begin / picks a script AND the DB has finished loading
 function maybeLaunch(){
-  if (!dbReady || !script || launched) return;
+  if (!dbReady || !entered || launched) return;
   launched = true;
   buildShell();
   window.addEventListener('hashchange', route);
   route();
 }
-function start(){ maybeLaunch(); }   // language pick on the welcome page calls this
+function enterApp(){   // landing → app: Begin (returning) or a script pick (first run)
+  entered = true;
+  if (!dbReady){ const w = document.querySelector('.welcome');
+    if (w && !w.querySelector('.w-loading')) w.insertAdjacentHTML('beforeend', '<div class="w-loading">loading the text…</div>'); }
+  maybeLaunch();
+}
 
 // ── onboarding (pick reading script) ───────────────────────────────────────
 function renderWelcome(){
@@ -146,15 +152,21 @@ function renderWelcome(){
     <div class="w-script">श्रीमद्भागवतम्</div>
     <div class="w-invoke">॥ श्रीमध्वपतिः प्रीयताम् ॥</div>
     <div class="w-credit">Developed &amp; maintained by Prof. Prathosh<br><a href="mailto:prathoshdata@gmail.com">prathoshdata@gmail.com</a></div>
-    <div class="w-prompt">भाषां चिनुत — choose your language</div>
-    <div class="scriptlist">${cards}</div>
+    ${script
+      ? `<button class="w-begin" id="beginBtn">॥ प्रवेशः · Begin ॥</button>
+         <button class="w-change" id="changeBtn">change reading script</button>
+         <div class="scriptlist" id="scriptlist" style="display:none">${cards}</div>`
+      : `<div class="w-prompt">भाषां चिनुत — choose your language</div>
+         <div class="scriptlist" id="scriptlist">${cards}</div>`}
     <button class="w-ack" id="ackBtn">Acknowledgements</button>
   </div>`;
-  app.querySelector('.scriptlist').onclick = e => { const b = e.target.closest('[data-sc]'); if (!b) return;
-    script = b.dataset.sc; localStorage.setItem('bhag_script', script);
-    if (!dbReady){ const w = document.querySelector('.welcome');
-      if (w && !w.querySelector('.w-loading')) w.insertAdjacentHTML('beforeend', '<div class="w-loading">loading the text…</div>'); }
-    start(); };
+  document.getElementById('scriptlist').onclick = e => { const b = e.target.closest('[data-sc]'); if (!b) return;
+    script = b.dataset.sc; localStorage.setItem('bhag_script', script); enterApp(); };
+  if (script){
+    document.getElementById('beginBtn').onclick = enterApp;
+    document.getElementById('changeBtn').onclick = ev => {
+      document.getElementById('scriptlist').style.display = ''; ev.target.style.display = 'none'; };
+  }
   document.getElementById('ackBtn').onclick = renderAbout;
 }
 function aboutHTML(){
@@ -197,8 +209,9 @@ function buildShell(){
       <span class="ref" id="pref"></span>
       <button class="ctl tan" id="tanBtn" title="tānpūrā drone">${ICON.tanpura}</button>
       <button class="ctl tanvol" id="tanVolBtn" title="tānpūrā volume" style="display:none"></button>
-      <button class="spd" id="spd">1×</button>
+      <button class="spd" id="spd" title="playback speed">1×</button>
       <button class="ctl" id="pclose">${ICON.close}</button>
+      <div class="spdpop" id="spdpop"><input type="range" id="spdrange" min="0.5" max="2" step="0.05" value="1"><span class="spdval" id="spdval">1×</span></div>
     </div>
     ${isNative ? `<div class="selbar" id="selbar">
       <span class="selcount" id="selcount">0 selected</span>
@@ -514,7 +527,7 @@ function cycleTanVol(){
 }
 
 // ── audio player ───────────────────────────────────────────────────────────
-let au, auPre, curIdx = -1, segs = null, speeds = [1, 1.25, 1.5, 0.75], si = 0;
+let au, auPre, curIdx = -1, segs = null, rate = +localStorage.getItem('bhag_rate') || 1;   // playback speed (slider, persisted)
 // ── gapless transition: a 2nd <audio> preloads the next śloka so the only delay between ślokas is
 // a deliberate, constant gap (not network/decode latency — the files have zero leading/trailing silence).
 let preIdx = -1, advanceTimer = 0, gapPaused = false, primed = false, unlockP = Promise.resolve();
@@ -553,8 +566,16 @@ function setupPlayer(){
   document.getElementById('prev').onclick = () => playFrom(curIdx - 1);
   document.getElementById('next').onclick = () => playFrom(curIdx + 1);
   document.getElementById('pclose').onclick = stopAudio;
-  document.getElementById('spd').onclick = () => { si = (si + 1) % speeds.length;
-    au.playbackRate = auPre.playbackRate = speeds[si]; document.getElementById('spd').textContent = speeds[si] + '×'; };
+  const fmtRate = r => (+(+r).toFixed(2)) + '×';
+  const spdBtn = document.getElementById('spd'), spdPop = document.getElementById('spdpop'),
+        spdRange = document.getElementById('spdrange'), spdVal = document.getElementById('spdval');
+  function setRate(r){ rate = +(+r).toFixed(2);
+    if (au) au.playbackRate = rate; if (auPre) auPre.playbackRate = rate;
+    localStorage.setItem('bhag_rate', rate);
+    spdBtn.textContent = fmtRate(rate); spdRange.value = rate; spdVal.textContent = fmtRate(rate); }
+  setRate(rate);                                         // init label + slider from the saved pref
+  spdBtn.onclick = () => spdPop.classList.toggle('on');  // tap pill → show/hide the drag slider
+  spdRange.oninput = () => setRate(spdRange.value);
   document.getElementById('tanBtn').onclick = toggleTanpura;
   document.getElementById('tanVolBtn').onclick = cycleTanVol; updateTanBtn();
   document.getElementById('loopBtn').onclick = toggleLoop; updateLoopBtn();
@@ -594,11 +615,11 @@ function playFrom(i){
   if (preIdx === i){                              // the preloader already buffered this śloka → instant swap
     const old = au; au = auPre; auPre = old; preIdx = -1;
     try { old.pause(); } catch (e){}              // stop the outgoing element (e.target!==au now → no UI/drone change)
-    au.playbackRate = speeds[si]; au.play().catch(() => {});
+    au.playbackRate = rate; au.play().catch(() => {});
     preloadNext(i);
   } else {                                        // cold load (first play / manual jump)
     resolveAudioSrc(v).then(src => { if (curIdx !== i) return;   // user skipped before resolve
-      au.src = src; au.playbackRate = speeds[si]; au.play().catch(() => {}); preloadNext(i); });
+      au.src = src; au.playbackRate = rate; au.play().catch(() => {}); preloadNext(i); });
   }
 }
 
