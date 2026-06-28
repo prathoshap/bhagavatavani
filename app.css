@@ -161,12 +161,6 @@ a{color:var(--accent);text-decoration:none}
 .scriptcard:active{transform:scale(.98)}
 .sc-native{font-size:15px;color:var(--ink);line-height:1.2;overflow-wrap:anywhere}
 .sc-eng{font-size:10px;color:var(--muted);line-height:1.15}
-.w-begin{margin:20px auto 6px;display:block;background:var(--accent);color:#fff;border:none;
-  border-radius:13px;font-size:18px;font-weight:600;padding:14px 46px;cursor:pointer;
-  box-shadow:0 4px 18px #0002;letter-spacing:.01em}
-.w-begin:active{transform:scale(.98)}
-.w-change{margin-top:2px;color:var(--muted);font-size:13px;background:none;border:none;
-  text-decoration:underline;cursor:pointer}
 .w-ack{margin-top:16px;color:var(--accent);font-size:13px;background:none;border:none;
   text-decoration:underline;cursor:pointer}
 .ack-section{margin:22px auto;max-width:430px}

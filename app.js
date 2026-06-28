@@ -117,29 +117,23 @@ const esc = s => { const e = document.createElement('div'); e.textContent = s ??
 function q(sql, p = []){ const s = db.prepare(sql); s.bind(p); const o = []; while (s.step()) o.push(s.getAsObject()); s.free(); return o; }
 
 // ── boot ─────────────────────────────────────────────────────────────────
-let dbReady = false, launched = false, entered = false;
-// always open on the landing page (branding + Begin / script picker); it needs no DB,
-// so it shows instantly while the DB loads in the background
-renderWelcome();
+let dbReady = false, launched = false;
+// show the welcome instantly (it needs no DB); load the 21 MB DB in the background
+if (!script) renderWelcome();
 initSqlJs({ locateFile: f => f })   // local bundled sql-wasm.wasm (fully offline)
   .then(SQL => fetch('bhagavatam.db', { cache: 'no-store' }).then(r => r.arrayBuffer())
     .then(buf => { db = new SQL.Database(new Uint8Array(buf)); dbReady = true; maybeLaunch(); }))
   .catch(e => { app.innerHTML = `<div class="spin">couldn’t load — serve over http (not file://).<br>${esc(''+e)}</div>`; });
 
-// launch the app once the user taps Begin / picks a script AND the DB has finished loading
+// launch the app once a language is chosen AND the DB has finished loading
 function maybeLaunch(){
-  if (!dbReady || !entered || launched) return;
+  if (!dbReady || !script || launched) return;
   launched = true;
   buildShell();
   window.addEventListener('hashchange', route);
   route();
 }
-function enterApp(){   // landing → app: Begin (returning) or a script pick (first run)
-  entered = true;
-  if (!dbReady){ const w = document.querySelector('.welcome');
-    if (w && !w.querySelector('.w-loading')) w.insertAdjacentHTML('beforeend', '<div class="w-loading">loading the text…</div>'); }
-  maybeLaunch();
-}
+function start(){ maybeLaunch(); }   // language pick on the welcome page calls this
 
 // ── onboarding (pick reading script) ───────────────────────────────────────
 function renderWelcome(){
@@ -152,21 +146,15 @@ function renderWelcome(){
     <div class="w-script">श्रीमद्भागवतम्</div>
     <div class="w-invoke">॥ श्रीमध्वपतिः प्रीयताम् ॥</div>
     <div class="w-credit">Developed &amp; maintained by Prof. Prathosh<br><a href="mailto:prathoshdata@gmail.com">prathoshdata@gmail.com</a></div>
-    ${script
-      ? `<button class="w-begin" id="beginBtn">॥ प्रवेशः · Begin ॥</button>
-         <button class="w-change" id="changeBtn">change reading script</button>
-         <div class="scriptlist" id="scriptlist" style="display:none">${cards}</div>`
-      : `<div class="w-prompt">भाषां चिनुत — choose your language</div>
-         <div class="scriptlist" id="scriptlist">${cards}</div>`}
+    <div class="w-prompt">भाषां चिनुत — choose your language</div>
+    <div class="scriptlist">${cards}</div>
     <button class="w-ack" id="ackBtn">Acknowledgements</button>
   </div>`;
-  document.getElementById('scriptlist').onclick = e => { const b = e.target.closest('[data-sc]'); if (!b) return;
-    script = b.dataset.sc; localStorage.setItem('bhag_script', script); enterApp(); };
-  if (script){
-    document.getElementById('beginBtn').onclick = enterApp;
-    document.getElementById('changeBtn').onclick = ev => {
-      document.getElementById('scriptlist').style.display = ''; ev.target.style.display = 'none'; };
-  }
+  app.querySelector('.scriptlist').onclick = e => { const b = e.target.closest('[data-sc]'); if (!b) return;
+    script = b.dataset.sc; localStorage.setItem('bhag_script', script);
+    if (!dbReady){ const w = document.querySelector('.welcome');
+      if (w && !w.querySelector('.w-loading')) w.insertAdjacentHTML('beforeend', '<div class="w-loading">loading the text…</div>'); }
+    start(); };
   document.getElementById('ackBtn').onclick = renderAbout;
 }
 function aboutHTML(){
@@ -1189,6 +1177,17 @@ async function shareVerse(ref){
   const row = q('SELECT text_dev t FROM entries WHERE skandha=? AND adhyaya=? AND verse=? LIMIT 1', [+sk, +a, +v])[0];
   if (!row) return;
   const srcLines = row.t.split('\n').map(l => tr(l));
+  // Web: share a hot link straight to the śloka (deep link), not an image.
+  if (!isNative){
+    const url = `${location.origin}${location.pathname}#/s/${sk}/${a}/${v}`;
+    const text = `${srcLines.join('\n')}\n— Śrīmad Bhāgavatam ${ref}`;
+    try { if (navigator.share){ await navigator.share({ title: `Śrīmad Bhāgavatam ${ref}`, text, url }); return; } }
+    catch (e){ if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); toast('link copied'); }
+    catch (e){ toast('sharing not supported here'); }
+    return;
+  }
+  // Native: share as an image (with text fallback).
   const text = `${srcLines.join('\n')}\n— Śrīmad Bhāgavatam ${ref}\nBhāgavata-VāNi`;
   let blob = null; try { blob = await verseImage(srcLines, ref); } catch (e){}
   try {
