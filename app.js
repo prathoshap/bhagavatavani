@@ -324,7 +324,8 @@ const back = on => { const b = document.getElementById('back'); if (b) b.style.d
 const setTab = name => document.querySelectorAll('.tab').forEach(t =>
   t.classList.toggle('on', t.dataset.tab === name || (name === 's' && t.dataset.tab === 'home')));
 const setTitle = t => document.getElementById('title').innerHTML = t;
-const V = html => document.getElementById('view').innerHTML = html;
+const V = html => { const v = document.getElementById('view'); v.innerHTML = html;
+  v.classList.remove('vin'); void v.offsetWidth; v.classList.add('vin'); };   // re-trigger the enter animation
 
 // ── Read: skandha list ─────────────────────────────────────────────────────
 function renderHome(){

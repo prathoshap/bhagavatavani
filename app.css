@@ -35,6 +35,10 @@ a{color:var(--accent);text-decoration:none}
 .fontbtn{font-weight:600;line-height:1}
 .fontbtn span{font-size:12px}
 .view{flex:1;width:100%;max-width:var(--maxw);margin:0 auto;padding:14px 16px 120px}
+/* minimalist view transition: a quick fade + slight rise on each navigation */
+@keyframes vin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.view.vin{animation:vin .18s ease-out}
+@media (prefers-reduced-motion:reduce){.view.vin{animation:none}}
 
 /* ── lists (skandha / adhyāya / generic rows) ────────────────────────────── */
 .card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
