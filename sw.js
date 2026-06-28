@@ -3,7 +3,7 @@
    CODE (html/js/css) is served stale-while-revalidate: cache instantly, refresh in the background, so
    a code update shows on the NEXT load with NO version bump and NO DB re-download. The big stable
    assets (DB, wasm, tanpura) are cache-first. ONLY bump CACHE when the DB / precache list changes. */
-const CACHE = 'bhag-v9';
+const CACHE = 'bhag-v10';
 const SHELL = ['./', './index.html', './app.css', './app.js', './normalize.js',
   './sql-wasm.js', './sql-wasm.wasm', './manifest.webmanifest', './bhagavatam.db'];
 const CODE = new Set(['/', '/index.html', '/app.js', '/app.css', '/normalize.js']);   // stale-while-revalidate

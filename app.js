@@ -667,8 +667,9 @@ function karaoke(){
   if (!segs) return;
   const t = au.currentTime, el = document.querySelector('.v.active'); if (!el) return;
   let seg = null;
-  for (const s of segs){ if (t >= s.s) seg = s; else break; }   // last segment started ≤ t → stays lit through the inter-hemistich gap (no blink)
-  el.querySelectorAll('.ln').forEach(l => l.classList.toggle('now', seg && +l.dataset.i === seg.i));
+  for (const s of segs){ if (t >= s.s) seg = s; else break; }   // last hemistich started ≤ t → stays lit through the inter-hemistich gap (no blink)
+  const lit = seg ? (seg.ln || [seg.i]) : null;                 // ln = display lines this hemistich spans (one rule for every metre)
+  el.querySelectorAll('.ln').forEach(l => l.classList.toggle('now', !!lit && lit.includes(+l.dataset.i)));
 }
 
 // ── Search (two-tier, all-script) ──────────────────────────────────────────
