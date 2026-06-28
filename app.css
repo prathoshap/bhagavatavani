@@ -73,6 +73,9 @@ a{color:var(--accent);text-decoration:none}
 .v.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 2px 18px #0002}
 .v .num{position:absolute;left:13px;top:9px;font-size:11px;color:var(--accent);font-feature-settings:"tnum"}
 .v .body{font-size:var(--read);padding:8px 2px 0}
+/* let users select & copy the text (WKWebView/native disables selection by default) */
+.v .body,.r-colophon,.r-heading,.r-syn .syn-line,.r-topic{
+  -webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .v.active .ln.now{color:var(--accent)}     /* now-playing line: text colour only, active verse only */
 .v .playind{position:absolute;right:9px;bottom:8px;width:16px;height:16px;color:var(--accent);
   opacity:0;transition:opacity .12s}
