@@ -351,6 +351,7 @@ function renderAdhyayas(sk){
 // ── Read: reader (continuous scroll) ───────────────────────────────────────
 let chapterAudio = [];   // playable verses in current chapter
 let autoPlayNext = false;   // set when rolling from one adhyāya into the next, so renderReader resumes playback
+let startIdx = 0;   // chapterAudio index to begin playback from (a focused/deep-linked verse, e.g. a stotra)
 let loopAdhyaya = load('bhag_loop', false);   // repeat the current chapter instead of advancing (pārāyaṇa)
 function renderReader(sk, a, focusV){
   const ad = q('SELECT heading_dev FROM adhyayas WHERE skandha=? AND adhyaya=?', [sk, a])[0] || {};
@@ -424,6 +425,8 @@ function renderReader(sk, a, focusV){
     }
   }
   showChapterPlayer();
+  // play should begin at the opened verse (e.g. a stotra mid-chapter), not the chapter start
+  startIdx = focusV ? Math.max(0, chapterAudio.findIndex(c => String(c.verse) === String(focusV))) : 0;
   const firstRef = (chapterAudio.find(c => c.verse != null) || {}).ref || `${sk}.${a}`;
   save('bhag_last', { ref: focusV ? `${sk}.${a}.${focusV}` : firstRef, ts: Date.now() });   // resume point
   if (focusV){ const t = view.querySelector(`.v[data-ref="${sk}.${a}.${focusV}"]`);
@@ -547,7 +550,7 @@ function setupPlayer(){
     el.onerror = e => { if (e.target === au && AUDIO_BASE) toast('audio not available yet for this śloka'); };
   }
   pp.onclick = () => {
-    if (curIdx < 0) return playFrom(0);                   // idle → start the chapter
+    if (curIdx < 0) return playFrom(startIdx);            // idle → start at the opened verse (stotra/deep-link), else chapter start
     if (advanceTimer){ clearAdvance(); gapPaused = true; pp.innerHTML = ICON.play; stopDrone(); return; }  // pause within the gap
     if (gapPaused){ gapPaused = false; return playFrom(curIdx + 1); }           // resume → next śloka
     au.paused ? au.play().catch(() => {}) : au.pause();
