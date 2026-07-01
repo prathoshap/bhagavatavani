@@ -146,6 +146,7 @@ function renderWelcome(){
     <div class="w-script">श्रीमद्भागवतम्</div>
     <div class="w-invoke">॥ श्रीमध्वपतिः प्रीयताम् ॥</div>
     <div class="w-credit">Developed &amp; maintained by Prof. Prathosh<br><a href="mailto:prathoshdata@gmail.com">prathoshdata@gmail.com</a></div>
+    <div class="w-tts">Recitations created using <a href="https://prathosh.in/vagdhenu/" target="_blank" rel="noopener">Vāgdhenu</a></div>
     <div class="w-prompt">भाषां चिनुत — choose your language</div>
     <div class="scriptlist">${cards}</div>
     <button class="w-ack" id="ackBtn">Acknowledgements</button>
@@ -166,6 +167,8 @@ function aboutHTML(){
       <p>We are deeply thankful to <b>Poornaprajna Saṃśodhana Mandiram, Bengaluru</b> for generously lending the text of Śrīmad Bhāgavatam.</p></div>
     <div class="ack-section"><div class="ack-h">Developed &amp; maintained by</div>
       <p>Prof. Prathosh<br><a href="mailto:prathoshdata@gmail.com">prathoshdata@gmail.com</a></p></div>
+    <div class="ack-section"><div class="ack-h">Recitations</div>
+      <p>Chanting synthesized with <a href="https://prathosh.in/vagdhenu/" target="_blank" rel="noopener">Vāgdhenu</a>, an open Sanskrit chant text-to-speech system.</p></div>
     <div class="w-invoke">॥ श्रीमध्वपतिः प्रीयताम् ॥</div>`;
 }
 function renderAbout(){   // from the welcome page (pre-shell)
