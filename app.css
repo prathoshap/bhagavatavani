@@ -32,6 +32,7 @@ a{color:var(--accent);text-decoration:none}
 .topbar .back{font-size:20px;color:var(--accent);padding:2px 6px}
 .iconbtn{font-size:18px;color:var(--muted);padding:4px 7px;border-radius:8px}
 .iconbtn:hover{background:var(--accent-soft);color:var(--accent)}
+google-cast-launcher{--primary-color:var(--accent);--secondary-color:var(--bg)}
 .fontbtn{font-weight:600;line-height:1}
 .fontbtn span{font-size:12px}
 .view{flex:1;width:100%;max-width:var(--maxw);margin:0 auto;padding:14px 16px 120px}

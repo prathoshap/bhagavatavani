@@ -8,9 +8,15 @@
 const AUDIO_BASE = (localStorage.getItem('bhag_audio') ||
   'https://pub-303f7559721c4b40bf6712eb557e350c.r2.dev/Bhagavata_Audio').replace(/\/+$/, '');
 const z2 = n => String(n).padStart(2, '0'), z3 = n => String(n).padStart(3, '0');
+// AUDIO_REV — one-time cache-buster for the installed base. Devices cached audio BEFORE the R2
+// objects carried `Cache-Control: no-cache`, and a WebView will not revalidate those stale
+// entries on its own. Bumping REV changes the URL → a single fresh fetch per verse on next play;
+// `no-cache` on the objects keeps them current afterwards. You should NOT need to bump this again
+// (no-cache makes every future audio correction propagate automatically).
+const AUDIO_REV = '2';
 // R2 mirrors the source layout: skandha_NN/adhyaya_NNN/BhP_NN.NNN.RRR.m4a where RRR = the
 // verse's 1-based rank among the chapter's Bhagavatam verses (= source file number), NOT audio_id.
-const audioUrl = (sk, a, nnn) => `${AUDIO_BASE}/skandha_${z2(sk)}/adhyaya_${z3(a)}/BhP_${z2(sk)}.${z3(a)}.${z3(nnn)}.m4a`;
+const audioUrl = (sk, a, nnn) => `${AUDIO_BASE}/skandha_${z2(sk)}/adhyaya_${z3(a)}/BhP_${z2(sk)}.${z3(a)}.${z3(nnn)}.m4a?r=${AUDIO_REV}`;
 // karaoke timings are baked into bhagavatam.db (table `timings`) — no R2 /ts/ fetch.
 
 const LANGS = [['deva','संस्कृतम् · Devanāgarī'],['iast','IAST'],['en','English'],['hi','हिन्दी'],
@@ -189,6 +195,7 @@ function buildShell(){
       <button class="iconbtn" id="infoBtn" title="about · acknowledgements · contact">${ICON.info}</button>
       <button class="iconbtn fontbtn" id="fontBtn" title="text size">A<span>a</span></button>
       <button class="iconbtn" id="themeBtn" title="light / dark"></button>
+      <google-cast-launcher id="castBtn" title="Cast to TV"></google-cast-launcher>
       <button class="langbtn" id="scriptBtn" title="reading language"></button>
     </header>
     <main class="view" id="view"></main>
@@ -556,7 +563,12 @@ function setupPlayer(){
     if (curIdx < 0) return playFrom(startIdx);            // idle → start at the opened verse (stotra/deep-link), else chapter start
     if (advanceTimer){ clearAdvance(); gapPaused = true; pp.innerHTML = ICON.play; stopDrone(); return; }  // pause within the gap
     if (gapPaused){ gapPaused = false; return playFrom(curIdx + 1); }           // resume → next śloka
-    au.paused ? au.play().catch(() => {}) : au.pause();
+    // If Cast session active, cast the audio instead of playing locally
+    if (castSession && au.src) {
+      castAudio(au.src, `Śrīmad Bhāgavatam ${_ref}`);
+    } else {
+      au.paused ? au.play().catch(() => {}) : au.pause();
+    }
   };
   document.getElementById('prev').onclick = () => playFrom(curIdx - 1);
   document.getElementById('next').onclick = () => playFrom(curIdx + 1);
@@ -1215,3 +1227,25 @@ function toast(msg){
   el.textContent = msg; el.style.opacity = '1'; clearTimeout(toastT);
   toastT = setTimeout(() => el.style.opacity = '0', 2200);
 }
+
+// ── Chromecast support ──────────────────────────────────────────────────────
+let castSession=null;
+const initCast=()=>{
+  if(!window.chrome || !chrome.cast) return;
+  const apiConfig=new chrome.cast.ApiConfig(
+    new chrome.cast.SessionRequest(chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID),
+    castSessionListener, castReceiverListener
+  );
+  chrome.cast.initialize(apiConfig, ()=>console.log('Cast API initialized'), e=>console.log('Cast init error:', e));
+};
+const castSessionListener=(s)=>{ castSession=s; console.log('Cast session established'); };
+const castReceiverListener=(e)=>{ if(e===chrome.cast.ReceiverAvailability.AVAILABLE) console.log('Cast receivers available'); };
+const castAudio=(audioUrl,title)=>{
+  if(!castSession) return;
+  const mediaInfo=new chrome.cast.media.MediaInfo(audioUrl, 'audio/mp4');
+  mediaInfo.metadata=new chrome.cast.media.GenericMediaMetadata();
+  mediaInfo.metadata.title=title;
+  const request=new chrome.cast.media.LoadRequest(mediaInfo);
+  castSession.loadMedia(request, ()=>console.log('Audio cast started'), e=>console.log('Cast error:', e));
+};
+document.addEventListener('DOMContentLoaded', initCast);
