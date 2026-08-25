@@ -563,10 +563,8 @@ function setupPlayer(){
     if (curIdx < 0) return playFrom(startIdx);            // idle → start at the opened verse (stotra/deep-link), else chapter start
     if (advanceTimer){ clearAdvance(); gapPaused = true; pp.innerHTML = ICON.play; stopDrone(); return; }  // pause within the gap
     if (gapPaused){ gapPaused = false; return playFrom(curIdx + 1); }           // resume → next śloka
-    // If Cast session active, cast the audio instead of playing locally
-    if (castSession && au.src) {
-      castAudio(au.src, `Śrīmad Bhāgavatam ${_ref}`);
-    } else {
+    // Hand off to a receiver if one is connected, else play locally.
+    if (!(au.src && castAudio(au.src, `Śrīmad Bhāgavatam ${_ref}`))) {
       au.paused ? au.play().catch(() => {}) : au.pause();
     }
   };
@@ -1228,24 +1226,39 @@ function toast(msg){
   toastT = setTimeout(() => el.style.opacity = '0', 2200);
 }
 
-// ── Chromecast support ──────────────────────────────────────────────────────
-let castSession=null;
-const initCast=()=>{
-  if(!window.chrome || !chrome.cast) return;
-  const apiConfig=new chrome.cast.ApiConfig(
-    new chrome.cast.SessionRequest(chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID),
-    castSessionListener, castReceiverListener
-  );
-  chrome.cast.initialize(apiConfig, ()=>console.log('Cast API initialized'), e=>console.log('Cast init error:', e));
+// ── Chromecast ──────────────────────────────────────────────────────────────
+// <google-cast-launcher> is a Cast Application Framework element, so the whole path uses CAF.
+// It was previously initialised through the legacy chrome.cast.ApiConfig/initialize pair, which
+// is a different API: the launcher was never registered (invisible, zero-size) and `castSession`
+// stayed null forever, so the cast branch in the player could not fire either.
+//
+// Init runs from __onGCastApiAvailable, the callback the SDK itself invokes when it is ready.
+// DOMContentLoaded was wrong twice: the SDK loads asynchronously, and app.js runs late enough
+// that the event has usually already fired, so the handler never ran at all.
+//
+// The launcher HIDES ITSELF when no receiver is discoverable — an absent button on a network
+// with no Chromecast is correct, not a fault.
+window.__onGCastApiAvailable = function (ok) {
+  if (!ok || !window.cast || !cast.framework) return;
+  cast.framework.CastContext.getInstance().setOptions({
+    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+  });
 };
-const castSessionListener=(s)=>{ castSession=s; console.log('Cast session established'); };
-const castReceiverListener=(e)=>{ if(e===chrome.cast.ReceiverAvailability.AVAILABLE) console.log('Cast receivers available'); };
-const castAudio=(audioUrl,title)=>{
-  if(!castSession) return;
-  const mediaInfo=new chrome.cast.media.MediaInfo(audioUrl, 'audio/mp4');
-  mediaInfo.metadata=new chrome.cast.media.GenericMediaMetadata();
-  mediaInfo.metadata.title=title;
-  const request=new chrome.cast.media.LoadRequest(mediaInfo);
-  castSession.loadMedia(request, ()=>console.log('Audio cast started'), e=>console.log('Cast error:', e));
+const castSess = () => {
+  try { return cast.framework.CastContext.getInstance().getCurrentSession(); }
+  catch (e) { return null; }
 };
-document.addEventListener('DOMContentLoaded', initCast);
+// Returns true when the audio was handed to a receiver, so the caller skips local playback.
+// The session is fetched fresh every time: it is created and torn down by the launcher button,
+// outside this code's control, so caching it in a variable is what went stale before.
+const castAudio = (audioUrl, title) => {
+  const s = castSess();
+  if (!s) return false;
+  const mi = new chrome.cast.media.MediaInfo(audioUrl, 'audio/mp4');   // AAC in MP4, as R2 serves
+  mi.metadata = new chrome.cast.media.GenericMediaMetadata();
+  mi.metadata.title = title || 'श्रीमद्भागवतम्';
+  s.loadMedia(new chrome.cast.media.LoadRequest(mi))
+   .then(() => {}, e => toast('cast error: ' + (e && e.message || e)));
+  return true;
+};

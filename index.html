@@ -16,7 +16,11 @@
 <body>
 <div id="app"><div class="spin">loading the Bhāgavatam…</div></div>
 
-<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+<!-- loadCastFramework=1 is REQUIRED: without it this loads only the legacy chrome.cast.* v2 API
+     and the <google-cast-launcher> custom element is never registered, so the button stays an
+     undefined element with no shadow DOM and zero size — invisible on every network, which
+     reads as "casting is broken" when the SDK was simply not asked for the framework. -->
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 <script src="sql-wasm.js"></script>
 <script src="normalize.js"></script>
 <script src="app.js"></script>
